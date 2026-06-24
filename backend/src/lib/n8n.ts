@@ -36,26 +36,39 @@ async function triggerWebhook(
 ): Promise<WebhookResponse> {
   const url = `${config.n8n.baseUrl}/webhook/${webhookPath}`;
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(30000),
-  });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30000),
+      });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`n8n webhook error ${response.status}: ${error}`);
+      if (response.status === 502 || response.status === 503) {
+        console.log(`n8n not ready (attempt ${attempt}/3), retrying in 5s...`);
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`n8n webhook error ${response.status}: ${error}`);
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+
+    } catch (err) {
+      if (attempt === 3) throw err;
+      console.log(`n8n attempt ${attempt} failed, retrying in 5s...`);
+      await new Promise((r) => setTimeout(r, 5000));
+    }
   }
 
-  const data = await response.json();
-
-  return {
-    success: true,
-    data,
-  };
+  throw new Error("n8n failed after 3 attempts");
 }
 
 export const n8n = {
