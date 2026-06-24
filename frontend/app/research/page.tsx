@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { config } from "../../config";
 
 type PlanStep = {
   order: number;
@@ -86,7 +87,7 @@ const STATUS_META: Record<string, { color: string; bg: string; border: string }>
 };
 
 async function runResearch(goal: string): Promise<PlanResponse> {
-  const res = await fetch("/api/research", {
+  const res = await fetch(`${config.apiUrl}/api/research`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ goal }),
@@ -96,13 +97,13 @@ async function runResearch(goal: string): Promise<PlanResponse> {
 }
 
 async function executeResearch(id: string): Promise<ExecuteResponse> {
-  const res = await fetch(`/api/research/${id}/execute`, { method: "POST" });
+  const res = await fetch(`${config.apiUrl}/api/research/${id}/execute`, { method: "POST" });
   if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Failed"); }
   return res.json();
 }
 
 async function generateReport(id: string): Promise<Report> {
-  const res = await fetch(`/api/research/${id}/report`, { method: "POST" });
+  const res = await fetch(`${config.apiUrl}/api/research/${id}/report`, { method: "POST" });
   if (!res.ok) { const e = await res.json(); throw new Error(e.error ?? "Failed"); }
   return res.json();
 }
